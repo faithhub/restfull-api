@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CheckPost;
 use App\Models\Post;
+use App\Mail\Subscriber;
+use App\Models\Subscriber as ModelsSubscriber;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 
 class PostController extends Controller
@@ -77,6 +81,27 @@ class PostController extends Controller
             ]);
             $post->save();
 
+            $post = Post::with('website')->get();
+            for ($i = 0; $i < $post->count(); $i++) {
+                $sub = ModelsSubscriber::where('website_id', $post[$i]->website_id)->get();
+                for ($j = 0; $j < $sub->count(); $j++) {
+                    $check = CheckPost::where(['website_id' => $post[$i]->website_id,  'post_id' => $post[$i]->id, 'subscriber_id' => $sub[$j]->id])->get();
+                    if ($check->count() == 0) {
+                        $data = [
+                            'website_name' => $post[$i]->website->name,
+                            'website_link' => $post[$i]->website->url,
+                            'subscriber_name' => $sub[$j]->name,
+                            'title' => $post[$i]->title,
+                            'description' => $post[$i]->description
+                        ];
+                        Mail::to($sub[$j]->email)->send(new Subscriber($data));
+                        $save = new CheckPost([
+                            'website_id' => $post[$i]->website_id,  'post_id' => $post[$i]->id, 'subscriber_id' => $sub[$j]->id
+                        ]);
+                        $save->save();
+                    }
+                }
+            }
             //Response
             return response()->json([
                 "message" => "Post created"

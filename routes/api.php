@@ -29,6 +29,3 @@ Route::delete('post/{id}', [\App\Http\Controllers\PostController::class, 'destro
 Route::post('subscribe', [\App\Http\Controllers\SubscriberController::class, 'store']);
 Route::get('subscribe', [\App\Http\Controllers\SubscriberController::class, 'index']);
 
-Route::get('mail', [\App\Http\Controllers\MailController::class, 'send_email']);
-
-// Route::get('send-bulk-mail', [SendBulkMailController::class, 'sendBulkMail'])->name('send-bulk-mail');

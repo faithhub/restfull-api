@@ -4,6 +4,8 @@ namespace App\Console\Commands;
 
 use App\Http\Controllers\MailController;
 use App\Mail\Subscriber;
+use App\Models\CheckPost;
+use App\Models\Post;
 use App\Models\Subscriber as ModelsSubscriber;
 use App\Models\Website;
 use Illuminate\Console\Command;
@@ -41,18 +43,27 @@ class SendEmailToSubscriber extends Command
      * @return int
      */
     public function handle()
-    {
-        $websites = Website::with('post')->get();
-        foreach ($websites as $website) {
-           $subscribers = ModelsSubscriber::where('website_id', $website->id)->get('email');
-           foreach ($website->post as $post) {
-              $data = [
-                 'website_name' => $website->name,
-                 'title' => $post->title,
-                 'description' => $post->description
-              ];
-              Mail::to($subscribers)->send(new Subscriber($data));
-           }
+    {        
+        $post = Post::with('website')->get();
+        for ($i = 0; $i < $post->count(); $i++) {
+            $sub = ModelsSubscriber::where('website_id', $post[$i]->website_id)->get();
+            for ($j = 0; $j < $sub->count(); $j++) {
+                $check = CheckPost::where(['website_id' => $post[$i]->website_id,  'post_id' => $post[$i]->id, 'subscriber_id' => $sub[$j]->id])->get();
+                if ($check->count() == 0) {
+                    $data = [
+                        'website_name' => $post[$i]->website->name,
+                        'website_link' => $post[$i]->website->url,
+                        'subscriber_name' => $sub[$j]->name,
+                        'title' => $post[$i]->title,
+                        'description' => $post[$i]->description
+                    ];
+                    Mail::to($sub[$j]->email)->send(new Subscriber($data));
+                    $save = new CheckPost([
+                        'website_id' => $post[$i]->website_id,  'post_id' => $post[$i]->id, 'subscriber_id' => $sub[$j]->id
+                    ]);
+                    $save->save();
+                }
+            }
         }  
         $this->info('The posts are sent successfully!');
     }
